@@ -308,13 +308,7 @@ export default function Meals() {
         )}
       </section>
 
-      {/* FAB */}
-      <button onClick={openAdd} aria-label="Add a meal"
-        className="fixed z-30 bg-primary text-on-primary shadow-[0_6px_24px_rgba(0,93,172,0.45)] rounded-2xl flex items-center gap-2 px-5 py-3.5 font-black text-[15px] transition-all hover:scale-105 active:scale-95"
-        style={{bottom:'calc(112px + env(safe-area-inset-bottom))',right:'20px'}}>
-        <span className="material-symbols-outlined text-[22px]" style={{fontVariationSettings:"'FILL' 1"}}>add</span>
-        Add Meal
-      </button>
+
 
       {/* Bottom sheet */}
       {showForm&&(

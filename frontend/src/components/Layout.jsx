@@ -41,13 +41,7 @@ export default function Layout() {
       >
         {/* Left: Mobile back button or Desktop Logo */}
         <div className="flex-1 flex justify-start items-center">
-          <button
-            onClick={() => navigate(-1)}
-            aria-label="Navigate Back"
-            className="md:hidden text-slate-500 hover:bg-slate-50 active:scale-95 transition-transform duration-200 p-2 rounded-full flex items-center justify-center min-w-[44px] min-h-[44px]"
-          >
-            <span className="material-symbols-outlined text-[28px]" aria-hidden="true">arrow_back</span>
-          </button>
+
           <div
             className="hidden md:block text-[22px] font-black text-blue-800 cursor-pointer select-none tracking-tight"
             onClick={() => navigate('/')}

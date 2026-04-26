@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chat with Dr. Smith - HealthAssist</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline": "#717783",
+                        "surface-container-highest": "#e0e2ea",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#733600",
+                        "tertiary-fixed-dim": "#ffb688",
+                        "on-secondary-fixed-variant": "#005312",
+                        "secondary-fixed": "#9df898",
+                        "secondary": "#106d20",
+                        "tertiary-container": "#ba5b00",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed": "#ffdbc7",
+                        "on-tertiary-fixed": "#311300",
+                        "on-tertiary": "#ffffff",
+                        "surface": "#f9f9ff",
+                        "surface-variant": "#e0e2ea",
+                        "on-secondary-fixed": "#002204",
+                        "surface-bright": "#f9f9ff",
+                        "inverse-surface": "#2d3037",
+                        "on-tertiary-container": "#fffeff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#1a7425",
+                        "secondary-fixed-dim": "#82db7e",
+                        "on-primary-container": "#fffdff",
+                        "primary-container": "#1976d2",
+                        "outline-variant": "#c1c6d4",
+                        "on-primary-fixed": "#001c3a",
+                        "secondary-container": "#9df898",
+                        "error": "#ba1a1a",
+                        "primary": "#005dac",
+                        "on-surface-variant": "#414752",
+                        "tertiary": "#944700",
+                        "error-container": "#ffdad6",
+                        "on-surface": "#181c21",
+                        "primary-fixed-dim": "#a5c8ff",
+                        "inverse-primary": "#a5c8ff",
+                        "surface-container-high": "#e6e8f0",
+                        "on-primary-fixed-variant": "#004786",
+                        "on-background": "#181c21",
+                        "background": "#f9f9ff",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#d4e3ff",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f2f3fc",
+                        "inverse-on-surface": "#eff0f9",
+                        "surface-tint": "#005faf",
+                        "surface-dim": "#d8dae2",
+                        "surface-container": "#ecedf6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "1280px",
+                        "stack-sm": "12px",
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "40px",
+                        "unit": "8px",
+                        "stack-md": "24px",
+                        "stack-lg": "48px"
+                    },
+                    "fontFamily": {
+                        "display": ["Public Sans"],
+                        "label-bold": ["Public Sans"],
+                        "h1": ["Public Sans"],
+                        "h2": ["Public Sans"],
+                        "body-md": ["Public Sans"],
+                        "button": ["Public Sans"],
+                        "body-lg": ["Public Sans"]
+                    },
+                    "fontSize": {
+                        "display": ["40px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "label-bold": ["16px", { "lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "700" }],
+                        "h1": ["32px", { "lineHeight": "1.3", "fontWeight": "700" }],
+                        "h2": ["24px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "body-md": ["18px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "button": ["18px", { "lineHeight": "1", "fontWeight": "600" }],
+                        "body-lg": ["20px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background min-h-screen flex flex-col font-body-md text-on-background selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar Shared Component -->
+<header class="bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 font-['Public_Sans'] text-lg font-bold tracking-tight docked full-width top-0 border-b-2 border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.05)] flex justify-between items-center h-[72px] w-full px-6 sticky z-50">
+<button aria-label="Go back" class="text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-transform duration-200 p-2 rounded-full flex items-center justify-center -ml-2">
+<span class="material-symbols-outlined text-[28px]">arrow_back</span>
+</button>
+<h1 class="text-xl font-black text-blue-800 dark:text-blue-300">HealthAssist</h1>
+<button aria-label="Account profile" class="text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-transform duration-200 p-2 rounded-full flex items-center justify-center -mr-2">
+<span class="material-symbols-outlined text-[28px]">account_circle</span>
+</button>
+</header>
+<!-- Chat Subject Header -->
+<div class="bg-surface-container-low px-gutter py-4 flex items-center gap-4 shadow-[0_4px_20px_rgba(0,0,0,0.05)] z-40 relative sticky top-[72px]">
+<div class="w-14 h-14 rounded-full bg-primary-container flex-shrink-0 border-2 border-surface-container-low overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+<img alt="Dr. Smith" class="w-full h-full object-cover" data-alt="Portrait of a friendly middle-aged male doctor with a slight smile, wearing a white coat and stethoscope, soft clinical lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjIQaKx9PZWjsqaN-6vxkgEf2aB1A5FZB72KVpHSXB4mchXmOfmNQfW7qIjpje39sh5v3ebs9D-JpBZLMPiMd0N4hp4IxRMGS7RgSo1fduFWT8Xem1HgJC7BKtQ8KiRJbRflV-WIWxYDWgOxWZGhDkCAVI64qvATdIROFcLCyg03Z0cJGhUTEGZuFBe8czCOK4dXqnHlh7Owt_K_HLUR2k4oVHi0M6uGdGdXa-bCuVuAj2jKfMSR02l_OGInDanvbFqtrXV9M3clGD"/>
+</div>
+<div>
+<h2 class="font-h2 text-h2 text-on-surface m-0">Chat with Dr. Smith</h2>
+<div class="flex items-center gap-2 mt-1">
+<span class="w-3 h-3 rounded-full bg-secondary"></span>
+<span class="font-body-md text-body-md text-on-surface-variant font-medium">Online Now</span>
+</div>
+</div>
+</div>
+<!-- Chat Canvas -->
+<main class="flex-1 overflow-y-auto px-margin-mobile md:px-margin-desktop py-stack-md flex flex-col gap-stack-md max-w-container-max mx-auto w-full pb-32">
+<!-- System Message / Timestamp -->
+<div class="flex justify-center my-2">
+<span class="bg-surface-container-high text-on-surface-variant font-label-bold text-label-bold px-4 py-2 rounded-full text-sm shadow-sm">Today</span>
+</div>
+<!-- Doctor Message -->
+<div class="flex justify-start w-full">
+<div class="flex flex-col gap-1 max-w-[85%] md:max-w-[70%]">
+<div class="bg-primary text-on-primary p-5 rounded-[24px] rounded-tl-[4px] shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+<p class="font-body-lg text-body-lg m-0">Hello! I see you logged a new medication earlier. How are you feeling today?</p>
+</div>
+<span class="font-body-md text-sm text-outline ml-2">10:00 AM</span>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex justify-end w-full">
+<div class="flex flex-col gap-1 max-w-[85%] md:max-w-[70%] items-end">
+<div class="bg-surface-container-highest text-on-surface p-5 rounded-[24px] rounded-tr-[4px] shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant/30">
+<p class="font-body-lg text-body-lg m-0">Hi Dr. Smith. I'm feeling okay, but a little bit dizzy after taking it this morning.</p>
+</div>
+<span class="font-body-md text-sm text-outline mr-2">10:05 AM</span>
+</div>
+</div>
+<!-- Doctor Message -->
+<div class="flex justify-start w-full">
+<div class="flex flex-col gap-1 max-w-[85%] md:max-w-[70%]">
+<div class="bg-primary text-on-primary p-5 rounded-[24px] rounded-tl-[4px] shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+<p class="font-body-lg text-body-lg m-0">Thank you for letting me know. Mild dizziness can be a common initial side effect. Is it severe, or just a light feeling?</p>
+</div>
+<span class="font-body-md text-sm text-outline ml-2">10:07 AM</span>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex justify-end w-full">
+<div class="flex flex-col gap-1 max-w-[85%] md:max-w-[70%] items-end">
+<div class="bg-surface-container-highest text-on-surface p-5 rounded-[24px] rounded-tr-[4px] shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant/30">
+<p class="font-body-lg text-body-lg m-0">Just a light feeling. It seems to be passing now.</p>
+</div>
+<span class="font-body-md text-sm text-outline mr-2">10:10 AM</span>
+</div>
+</div>
+</main>
+<!-- Sticky Input Area -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container-lowest p-margin-mobile md:px-margin-desktop py-4 shadow-[0_-4px_30px_rgba(0,0,0,0.1)] z-50">
+<div class="max-w-container-max mx-auto flex items-center gap-4">
+<button aria-label="Add attachment" class="w-[56px] h-[56px] flex-shrink-0 rounded-full bg-surface-container-high flex items-center justify-center text-primary shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-[28px]">add</span>
+</button>
+<div class="flex-1 relative">
+<label class="sr-only" for="chat-input">Type your message</label>
+<input class="w-full min-h-[56px] bg-surface border-2 border-outline-variant focus:border-primary rounded-[28px] py-3 pl-6 pr-12 font-body-lg text-body-lg text-on-surface placeholder:text-outline transition-colors outline-none shadow-sm" id="chat-input" placeholder="Type your message..." type="text"/>
+</div>
+<button aria-label="Send message" class="w-[56px] h-[56px] flex-shrink-0 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.15)] active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+</div>
+</body></html>

@@ -468,7 +468,7 @@ export default function Medications() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/40 z-[200] backdrop-blur-sm"
             onClick={() => setShowForm(false)}
             aria-hidden="true"
           />
@@ -478,7 +478,7 @@ export default function Medications() {
             role="dialog"
             aria-modal="true"
             aria-label="Add Medication"
-            className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.18)] max-w-[600px] mx-auto animate-[slideUp_0.25s_ease-out] flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-[300] bg-surface rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.18)] max-w-[600px] mx-auto animate-[slideUp_0.25s_ease-out] flex flex-col"
             style={{ maxHeight: '88vh' }}
           >
             {/* Drag handle + header — never scrolls away */}

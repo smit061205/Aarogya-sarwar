@@ -187,7 +187,7 @@ export default function Medications() {
       if (permission !== 'granted') return;
 
       const timeouts = [];
-      const FIVE_MIN = 5 * 60 * 1000;
+      const TWELVE_HOURS = 12 * 60 * 60 * 1000;
 
       pending.forEach(med => {
         const [h, min] = med.time.split(':').map(Number);
@@ -212,8 +212,8 @@ export default function Medications() {
           } catch(err) { console.error('[Notif] Error:', err); }
         };
 
-        if (delay <= 0 && delay >= -FIVE_MIN) {
-          console.log(`[Notif] "${med.name}" just missed — firing now`);
+        if (delay <= 0 && delay >= -TWELVE_HOURS) {
+          console.log(`[Notif] "${med.name}" missed — firing now`);
           notify();
         } else if (delay > 0) {
           timeouts.push(setTimeout(notify, delay));

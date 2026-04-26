@@ -93,7 +93,7 @@ export default function Meals() {
       if (permission !== 'granted') return;
 
       const timeouts = [];
-      const FIVE_MIN = 5 * 60 * 1000;
+      const TWELVE_HOURS = 12 * 60 * 60 * 1000;
 
       pending.forEach(meal => {
         const [h, min] = meal.time.split(':').map(Number);
@@ -117,8 +117,8 @@ export default function Meals() {
           } catch(err) { console.error('[Notif-Meals] Error:', err); }
         };
 
-        if (delay <= 0 && delay >= -FIVE_MIN) {
-          console.log(`[Notif-Meals] "${meal.mealType}" just missed — firing now`);
+        if (delay <= 0 && delay >= -TWELVE_HOURS) {
+          console.log(`[Notif-Meals] "${meal.mealType}" missed — firing now`);
           notify();
         } else if (delay > 0) {
           timeouts.push(setTimeout(notify, delay));

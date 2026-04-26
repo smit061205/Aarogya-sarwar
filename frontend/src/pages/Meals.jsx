@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 const STORAGE_KEY = 'aarogya_meals';
 const MEAL_TYPES = ['Breakfast','Lunch','Dinner','Snack','Pre-Workout','Post-Workout'];
@@ -17,7 +17,7 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const toDateStr = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 const getTodayStr = () => { const d=new Date(); return toDateStr(d.getFullYear(),d.getMonth(),d.getDate()); };
 
-const EMPTY_FORM = { mealName:'', mealType:'Breakfast', date:getTodayStr(), weight:'', calories:'', protein:'', carbs:'', fats:'', repeatMode:'none', repeatCount:7, repeatWeekDays:[] };
+const EMPTY_FORM = { mealName:'', mealType:'Breakfast', date:getTodayStr(), time:'', weight:'', calories:'', protein:'', carbs:'', fats:'', repeatMode:'none', repeatCount:7, repeatWeekDays:[] };
 
 function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]; } catch { return []; } }
 function save(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
@@ -76,6 +76,36 @@ export default function Meals() {
   const mealsForDay = (mealsByDate[selectedDate]||[]).slice().sort((a,b)=>
     (a.timestamp||'').localeCompare(b.timestamp||'')
   );
+
+  // ── Notification scheduling ─────────────────────────────────────
+  useEffect(() => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const todayStr = getTodayStr();
+    const pending = meals.filter(m => m.date === todayStr && m.time);
+    const timeouts = pending.map(meal => {
+      const [h, min] = meal.time.split(':').map(Number);
+      const fireAt = new Date();
+      fireAt.setHours(h, min, 0, 0);
+      const delay = fireAt - Date.now();
+      if (delay <= 0) return null;
+      return setTimeout(() => {
+        try {
+          const latest = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+          const todayMeals = latest.filter(m => m.date === todayStr);
+          const alreadyLogged = todayMeals.some(
+            m => m.mealType === meal.mealType && m.id !== meal.id
+          ) || todayMeals.find(m => m.id === meal.id);
+          if (alreadyLogged) return;
+          new Notification('🍽️ Meal Reminder', {
+            body: `Don't forget your ${meal.mealType}! You haven't logged "${meal.mealName}" yet.`,
+            icon: '/favicon.ico',
+            tag: meal.id,
+          });
+        } catch {}
+      }, delay);
+    }).filter(Boolean);
+    return () => timeouts.forEach(clearTimeout);
+  }, [meals]);
 
   const prevMonth = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
   const nextMonth = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
@@ -295,12 +325,22 @@ export default function Meals() {
                   value={form.mealName} onChange={e=>setForm(f=>({...f,mealName:e.target.value}))} autoFocus/>
               </div>
 
-              {/* Date */}
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="meal-date" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Date <span className="text-error">*</span></label>
-                <input id="meal-date" type="date" required
-                  className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] bg-surface-container-lowest transition-colors"
-                  value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
+              {/* Date + Time */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="meal-date" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Date <span className="text-error">*</span></label>
+                  <input id="meal-date" type="date" required
+                    className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] bg-surface-container-lowest transition-colors"
+                    value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="meal-time" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">
+                    Remind at <span className="text-[11px] font-normal text-outline">(optional)</span>
+                  </label>
+                  <input id="meal-time" type="time"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] bg-surface-container-lowest transition-colors"
+                    value={form.time} onChange={e=>setForm(f=>({...f,time:e.target.value}))}/>
+                </div>
               </div>
 
               {/* Weight + Calories */}

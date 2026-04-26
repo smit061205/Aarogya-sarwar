@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
 function getProfileName() {
@@ -16,6 +17,13 @@ export default function Layout() {
     path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
   const profileName = getProfileName();
+
+  // Request notification permission once
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
   const initials = profileName
     .trim()
     .split(' ')

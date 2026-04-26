@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from 'react';
 
 const STORAGE_KEY = "aarogya_medications";
 
@@ -158,6 +158,34 @@ export default function Medications() {
     setNewMed({ name: '', dosage: '', time: '', date: selectedDate, repeatMode: 'none', repeatCount: 7, repeatWeekDays: [] });
     setShowForm(true);
   };
+
+  // ── Notification scheduling ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const todayStr = getTodayStr();
+    const pending = meds.filter(m => m.date === todayStr && m.time && !m.taken);
+    const timeouts = pending.map(med => {
+      const [h, min] = med.time.split(':').map(Number);
+      const fireAt = new Date();
+      fireAt.setHours(h, min, 0, 0);
+      const delay = fireAt - Date.now();
+      if (delay <= 0) return null;
+      return setTimeout(() => {
+        try {
+          const latest = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+          const current = latest.find(m => m.id === med.id);
+          if (current && !current.taken) {
+            new Notification('💊 Medication Reminder', {
+              body: `Time to take ${med.name}${med.dosage ? ` — ${med.dosage}` : ''}!`,
+              icon: '/favicon.ico',
+              tag: med.id,
+            });
+          }
+        } catch {}
+      }, delay);
+    }).filter(Boolean);
+    return () => timeouts.forEach(clearTimeout);
+  }, [meds]);
 
   // ── Month navigation ────────────────────────────────────────────────────────
   const prevMonth = () => {

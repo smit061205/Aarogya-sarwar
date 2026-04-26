@@ -131,7 +131,7 @@ export default function Chat() {
   const totalMeals = meals.length;
 
   return (
-    <div className="flex flex-col w-full mt-4 flex-1" style={{ height: 'calc(100svh - 180px)' }}>
+    <div className="flex flex-col w-full mt-4 flex-1 h-full">
       {/* AI Header */}
       <div className="bg-surface-container-low px-4 py-4 flex items-center gap-4 shadow-[0_4px_20px_rgba(0,0,0,0.05)] rounded-2xl mb-3">
         <div className="w-14 h-14 rounded-full bg-primary-container flex-shrink-0 flex items-center justify-center shadow-md">

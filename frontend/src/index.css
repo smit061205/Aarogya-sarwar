@@ -5,7 +5,9 @@
 @layer base {
   body {
     @apply bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col;
-    min-height: max(884px, 100dvh);
+  }
+  #root {
+    @apply flex flex-col flex-1 w-full;
   }
 }
 

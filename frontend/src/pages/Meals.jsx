@@ -1,480 +1,327 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 const STORAGE_KEY = 'aarogya_meals';
-
-const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Pre-Workout', 'Post-Workout'];
-
-const MEAL_TYPE_ICONS = {
-  Breakfast: 'wb_sunny',
-  Lunch: 'sunny',
-  Dinner: 'nights_stay',
-  Snack: 'coffee',
-  'Pre-Workout': 'fitness_center',
-  'Post-Workout': 'sports_gymnastics',
+const MEAL_TYPES = ['Breakfast','Lunch','Dinner','Snack','Pre-Workout','Post-Workout'];
+const MEAL_ICONS = { Breakfast:'wb_sunny', Lunch:'sunny', Dinner:'nights_stay', Snack:'coffee', 'Pre-Workout':'fitness_center', 'Post-Workout':'sports_gymnastics' };
+const MEAL_COLORS = {
+  Breakfast:     { bg:'bg-amber-100',   text:'text-amber-700',   dot:'bg-amber-500' },
+  Lunch:         { bg:'bg-green-100',   text:'text-green-700',   dot:'bg-green-500' },
+  Dinner:        { bg:'bg-indigo-100',  text:'text-indigo-700',  dot:'bg-indigo-500' },
+  Snack:         { bg:'bg-pink-100',    text:'text-pink-700',    dot:'bg-pink-500' },
+  'Pre-Workout': { bg:'bg-orange-100',  text:'text-orange-700',  dot:'bg-orange-500' },
+  'Post-Workout':{ bg:'bg-teal-100',    text:'text-teal-700',    dot:'bg-teal-500' },
 };
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-const MEAL_TYPE_COLORS = {
-  Breakfast:      { bg: 'bg-primary-fixed',   text: 'text-on-primary-fixed' },
-  Lunch:          { bg: 'bg-tertiary-fixed',   text: 'text-on-tertiary-fixed' },
-  Dinner:         { bg: 'bg-inverse-surface',  text: 'text-inverse-on-surface' },
-  Snack:          { bg: 'bg-secondary-fixed',  text: 'text-on-secondary-fixed' },
-  'Pre-Workout':  { bg: 'bg-primary-container',text: 'text-on-primary-container' },
-  'Post-Workout': { bg: 'bg-secondary-container', text: 'text-on-secondary-container' },
-};
+const toDateStr = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const getTodayStr = () => { const d=new Date(); return toDateStr(d.getFullYear(),d.getMonth(),d.getDate()); };
 
-const getTodayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-};
+const EMPTY_FORM = { mealName:'', mealType:'Breakfast', date:getTodayStr(), weight:'', calories:'', protein:'', carbs:'', fats:'' };
 
-const EMPTY_FORM = {
-  mealName: '',
-  mealType: 'Breakfast',
-  date: getTodayStr(),
-  weight: '',
-  calories: '',
-  protein: '',
-  carbs: '',
-  fats: '',
-  // micronutrients
-  fiber: '',
-  sugar: '',
-  sodium: '',
-  vitaminC: '',
-  calcium: '',
-  iron: '',
-};
+function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]; } catch { return []; } }
+function save(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
 
-function loadMeals() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
-}
-
-function saveMeals(meals) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(meals));
-}
-
-// ─── Totals across all meals ────────────────────────────────────────────────
-function calcTotals(meals) {
-  return meals.reduce(
-    (acc, m) => ({
-      calories: acc.calories + (Number(m.calories) || 0),
-      protein:  acc.protein  + (Number(m.protein)  || 0),
-      carbs:    acc.carbs    + (Number(m.carbs)     || 0),
-      fats:     acc.fats     + (Number(m.fats)      || 0),
-    }),
-    { calories: 0, protein: 0, carbs: 0, fats: 0 }
-  );
+function formatTime(ts) { return ts ? new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''; }
+function formatDisplay(dateStr) {
+  if (!dateStr) return '';
+  const [y,m,d] = dateStr.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 }
 
 export default function Meals() {
-  const [meals, setMeals]           = useState(loadMeals);
-  const [showForm, setShowForm]      = useState(false);
-  const [form, setForm]              = useState(EMPTY_FORM);
-  const [showMicro, setShowMicro]    = useState(false);
-  const [expandedId, setExpandedId]  = useState(null);
-  const [editingId, setEditingId]    = useState(null); // null = add mode, string = edit mode
+  const today = new Date();
+  const [meals, setMeals] = useState(load);
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [selectedDate, setSelectedDate] = useState(getTodayStr());
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [expandedId, setExpandedId] = useState(null);
 
-  const totals = calcTotals(meals);
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const firstDOW = new Date(viewYear, viewMonth, 1).getDay();
 
-  const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+  const mealsByDate = useMemo(() => {
+    const map = {};
+    meals.forEach(m => { const k = m.date||getTodayStr(); if (!map[k]) map[k]=[]; map[k].push(m); });
+    return map;
+  }, [meals]);
 
-  const resetForm = () => {
-    setForm(EMPTY_FORM);
-    setShowMicro(false);
-    setShowForm(false);
-    setEditingId(null);
-  };
+  const mealsForDay = (mealsByDate[selectedDate]||[]).slice().sort((a,b)=>
+    (a.timestamp||'').localeCompare(b.timestamp||'')
+  );
 
-  const handleEdit = (meal) => {
-    // Strip id/timestamp — keep all editable fields
-    const { id, timestamp, ...fields } = meal;
-    setForm({ ...EMPTY_FORM, ...fields });
-    setShowMicro(!!(meal.fiber || meal.sugar || meal.sodium || meal.vitaminC || meal.calcium || meal.iron));
+  const prevMonth = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
+  const nextMonth = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
+
+  const openAdd = () => { setForm({...EMPTY_FORM, date:selectedDate}); setEditingId(null); setShowForm(true); };
+  const openEdit = (meal) => {
+    const {id,timestamp,...fields}=meal;
+    setForm({...EMPTY_FORM,...fields});
     setEditingId(id);
-    setExpandedId(null);
     setShowForm(true);
-    // Scroll form into view smoothly
-    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 50);
   };
 
   const handleSave = (e) => {
     e.preventDefault();
     if (!form.mealName.trim()) return;
-
+    let updated;
     if (editingId) {
-      // ── Update existing meal ──
-      const updated = meals.map((m) =>
-        m.id === editingId
-          ? { ...m, ...form, mealName: form.mealName.trim() }
-          : m
-      );
-      setMeals(updated);
-      saveMeals(updated);
+      updated = meals.map(m => m.id===editingId ? {...m,...form,mealName:form.mealName.trim()} : m);
     } else {
-      // ── Add new meal ──
-      const meal = {
-        ...form,
-        id: Date.now().toString(),
-        mealName: form.mealName.trim(),
-        date: form.date || getTodayStr(),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      const updated = [...meals, meal];
-      setMeals(updated);
-      saveMeals(updated);
+      const newMeal = {...form, id:Date.now().toString(), mealName:form.mealName.trim(), timestamp:new Date().toISOString()};
+      updated = [...meals, newMeal];
     }
-    resetForm();
+    setMeals(updated); save(updated);
+    setShowForm(false); setEditingId(null);
   };
 
   const handleDelete = (id) => {
-    const updated = meals.filter((m) => m.id !== id);
-    setMeals(updated);
-    saveMeals(updated);
-    if (expandedId === id) setExpandedId(null);
-    if (editingId === id) resetForm();
+    const updated = meals.filter(m=>m.id!==id);
+    setMeals(updated); save(updated);
+    if(expandedId===id) setExpandedId(null);
   };
 
-  return (
-    <main className="flex flex-col gap-stack-md mt-4">
+  const todayStr = getTodayStr();
+  const cells = [...Array(firstDOW).fill(null), ...Array.from({length:daysInMonth},(_,i)=>i+1)];
 
-      {/* Page title */}
-      <div className="mb-unit">
+  const totalCals = mealsForDay.reduce((s,m)=>s+(Number(m.calories)||0),0);
+
+  return (
+    <main className="flex flex-col gap-0 mt-4">
+      <div className="mb-4">
         <h1 className="font-h1 text-h1 text-on-surface">Daily Meals</h1>
-        <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
-          Track your nutrition throughout the day.
-        </p>
+        <p className="text-sm text-on-surface-variant mt-1">Tap a day to view or log meals.</p>
       </div>
 
-      {/* Daily Macro Summary */}
-      {meals.length > 0 && (
-        <section className="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] p-4 border border-outline-variant/20">
-          <p className="font-label-bold text-sm text-on-surface-variant uppercase tracking-widest mb-3">Today's Totals</p>
-          <div className="grid grid-cols-4 gap-2 text-center">
-            <MacroBadge label="Calories" value={totals.calories} unit="kcal" color="text-tertiary" />
-            <MacroBadge label="Protein"  value={totals.protein}  unit="g"    color="text-primary" />
-            <MacroBadge label="Carbs"    value={totals.carbs}    unit="g"    color="text-secondary" />
-            <MacroBadge label="Fats"     value={totals.fats}     unit="g"    color="text-on-surface-variant" />
-          </div>
-        </section>
-      )}
-
-      {/* Empty state */}
-      {meals.length === 0 && !showForm && (
-        <div className="text-center text-on-surface-variant py-10 bg-surface-container-low rounded-2xl border border-outline-variant/20">
-          <span className="material-symbols-outlined text-[48px] text-outline mb-2 block">restaurant</span>
-          <p className="font-body-md">No meals logged yet. Add your first meal below.</p>
+      {/* Calendar */}
+      <section className="bg-surface-container-lowest rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] border border-outline-variant/20 overflow-hidden mb-4">
+        {/* Month nav */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant/20 bg-surface-container-low">
+          <button onClick={prevMonth} aria-label="Previous month" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-90">
+            <span className="material-symbols-outlined text-[20px] text-on-surface-variant">chevron_left</span>
+          </button>
+          <p className="font-black text-[17px] text-on-surface">{MONTHS[viewMonth]} {viewYear}</p>
+          <button onClick={nextMonth} aria-label="Next month" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-90">
+            <span className="material-symbols-outlined text-[20px] text-on-surface-variant">chevron_right</span>
+          </button>
         </div>
-      )}
 
-      {/* Meal cards */}
-      {meals.map((meal) => {
-        const colors = MEAL_TYPE_COLORS[meal.mealType] || MEAL_TYPE_COLORS['Snack'];
-        const icon   = MEAL_TYPE_ICONS[meal.mealType]  || 'restaurant';
-        const isExpanded = expandedId === meal.id;
-        const hasMicro = meal.fiber || meal.sugar || meal.sodium || meal.vitaminC || meal.calcium || meal.iron;
+        {/* DOW headers */}
+        <div className="grid grid-cols-7 border-b border-outline-variant/10 bg-surface-container-low/50">
+          {DAYS.map(d=><div key={d} className="text-center py-2 text-[11px] font-black text-on-surface-variant uppercase tracking-widest">{d}</div>)}
+        </div>
 
-        return (
-          <article
-            key={meal.id}
-            className="bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant/20 overflow-hidden hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] transition-shadow"
-          >
-            {/* Card Header */}
-            <div
-              className="flex items-center gap-3 p-stack-md cursor-pointer"
-              onClick={() => setExpandedId(isExpanded ? null : meal.id)}
-            >
-              <div className={`w-11 h-11 rounded-full ${colors.bg} flex items-center justify-center flex-shrink-0`}>
-                <span className={`material-symbols-outlined text-[22px] ${colors.text}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                  {icon}
-                </span>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="font-h2 text-[20px] text-on-surface truncate">{meal.mealName}</h2>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}>
-                    {meal.mealType}
-                  </span>
-                </div>
-                <div className="flex gap-3 mt-0.5 flex-wrap">
-                  {(meal.date || meal.timestamp) && <span className="text-xs text-outline">🕒 {meal.date ? `${meal.date} ` : ''}{meal.timestamp}</span>}
-                  {meal.weight    && <span className="text-xs text-on-surface-variant">⚖️ {meal.weight}g</span>}
-                  {meal.calories  && <span className="text-xs text-tertiary font-bold">🔥 {meal.calories} kcal</span>}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleEdit(meal); }}
-                  className="text-outline hover:text-primary transition-colors p-1.5 rounded-full hover:bg-primary-fixed min-w-[44px] min-h-[44px] flex items-center justify-center"
-                  aria-label="Edit meal"
-                >
-                  <span className="material-symbols-outlined text-[18px]">edit</span>
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDelete(meal.id); }}
-                  className="text-outline hover:text-error transition-colors p-1.5 rounded-full hover:bg-error-container min-w-[44px] min-h-[44px] flex items-center justify-center"
-                  aria-label="Delete meal"
-                >
-                  <span className="material-symbols-outlined text-[18px]">delete</span>
-                </button>
-                <span className="material-symbols-outlined text-outline text-[20px] transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                  expand_more
-                </span>
-              </div>
-            </div>
-
-            {/* Expanded detail */}
-            {isExpanded && (
-              <div className="px-stack-md pb-stack-md border-t border-outline-variant/20 pt-3 flex flex-col gap-3">
-                {/* Macros row */}
-                {(meal.protein || meal.carbs || meal.fats) && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {meal.protein && <MacroDetail label="Protein" value={meal.protein} unit="g" color="bg-primary-fixed text-on-primary-fixed" />}
-                    {meal.carbs   && <MacroDetail label="Carbs"   value={meal.carbs}   unit="g" color="bg-tertiary-fixed text-on-tertiary-fixed" />}
-                    {meal.fats    && <MacroDetail label="Fats"    value={meal.fats}    unit="g" color="bg-secondary-fixed text-on-secondary-fixed" />}
+        {/* Grid */}
+        <div className="grid grid-cols-7 gap-px bg-outline-variant/10 p-1">
+          {cells.map((day,idx) => {
+            if (!day) return <div key={`p${idx}`} className="aspect-square"/>;
+            const ds = toDateStr(viewYear,viewMonth,day);
+            const isToday = ds===todayStr;
+            const isSel = ds===selectedDate;
+            const dayMeals = mealsByDate[ds]||[];
+            return (
+              <button key={ds} onClick={()=>setSelectedDate(ds)}
+                aria-label={`${day} ${MONTHS[viewMonth]}`} aria-pressed={isSel}
+                className={`flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl aspect-square transition-all active:scale-95
+                  ${isSel?'bg-primary shadow-md':isToday?'bg-primary-fixed border-2 border-primary':'bg-surface-container-lowest hover:bg-surface-container'}`}>
+                <span className={`text-[13px] font-black leading-none ${isSel?'text-on-primary':isToday?'text-primary':'text-on-surface'}`}>{day}</span>
+                {dayMeals.length>0&&(
+                  <div className="flex gap-0.5 mt-1.5 flex-wrap justify-center px-0.5">
+                    {dayMeals.slice(0,3).map((m,i)=>{
+                      const c = MEAL_COLORS[m.mealType]||MEAL_COLORS.Snack;
+                      return <span key={i} className={`w-1.5 h-1.5 rounded-full ${isSel?'bg-white/70':c.dot}`}/>;
+                    })}
+                    {dayMeals.length>3&&<span className={`text-[8px] font-black ${isSel?'text-on-primary/60':'text-outline'}`}>+{dayMeals.length-3}</span>}
                   </div>
                 )}
+              </button>
+            );
+          })}
+        </div>
 
-                {/* Micronutrients */}
-                {hasMicro && (
-                  <div className="bg-surface-container-low rounded-xl p-3">
-                    <p className="font-label-bold text-xs text-on-surface-variant uppercase tracking-wider mb-2">Micronutrients</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {meal.fiber    && <MicroRow label="Fiber"     value={`${meal.fiber}g`} />}
-                      {meal.sugar    && <MicroRow label="Sugar"     value={`${meal.sugar}g`} />}
-                      {meal.sodium   && <MicroRow label="Sodium"    value={`${meal.sodium}mg`} />}
-                      {meal.vitaminC && <MicroRow label="Vitamin C" value={`${meal.vitaminC}mg`} />}
-                      {meal.calcium  && <MicroRow label="Calcium"   value={`${meal.calcium}mg`} />}
-                      {meal.iron     && <MicroRow label="Iron"      value={`${meal.iron}mg`} />}
+        <div className="flex items-center gap-4 px-4 py-2 border-t border-outline-variant/10 bg-surface-container-low/50">
+          <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500"/><span className="text-[11px] text-on-surface-variant">Meals logged</span></div>
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-primary-fixed border-2 border-primary"/><span className="text-[11px] text-on-surface-variant">Today</span></div>
+        </div>
+      </section>
+
+      {/* Day panel */}
+      <section className="flex flex-col gap-3">
+        <div>
+          <p className="text-[11px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Selected Day</p>
+          <h2 className="font-bold text-[16px] text-on-surface leading-tight">{formatDisplay(selectedDate)}</h2>
+          {totalCals>0&&<p className="text-[13px] font-black text-primary mt-1">🔥 {totalCals} kcal total</p>}
+        </div>
+
+        {mealsForDay.length===0 ? (
+          <div className="text-center py-10 bg-surface-container-low rounded-2xl border border-dashed border-outline-variant/40">
+            <span className="material-symbols-outlined text-[40px] text-outline mb-2 block">restaurant</span>
+            <p className="font-bold text-[14px] text-on-surface-variant">No meals logged for this day.</p>
+            <p className="text-[13px] text-outline mt-1">Tap "+ Log Meal" to add one.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 pb-4">
+            {mealsForDay.map(meal=>{
+              const c = MEAL_COLORS[meal.mealType]||MEAL_COLORS.Snack;
+              const icon = MEAL_ICONS[meal.mealType]||'restaurant';
+              const isExp = expandedId===meal.id;
+              return (
+                <article key={meal.id} className="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="flex items-start gap-3 p-4 cursor-pointer" onClick={()=>setExpandedId(isExp?null:meal.id)}>
+                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${c.bg}`}>
+                      <span className={`material-symbols-outlined text-[20px] ${c.text}`} style={{fontVariationSettings:"'FILL' 1"}} aria-hidden="true">{icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-black text-[16px] text-on-surface truncate">{meal.mealName}</p>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>{meal.mealType}</span>
+                      </div>
+                      <div className="flex gap-3 mt-0.5 flex-wrap">
+                        {meal.calories&&<span className="text-xs font-bold text-amber-700">🔥 {meal.calories} kcal</span>}
+                        {meal.weight&&<span className="text-xs text-on-surface-variant">⚖️ {meal.weight}g</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={e=>{e.stopPropagation();openEdit(meal);}} aria-label="Edit meal" className="w-9 h-9 flex items-center justify-center rounded-full text-outline hover:text-primary hover:bg-primary-fixed transition-all">
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                      </button>
+                      <button onClick={e=>{e.stopPropagation();handleDelete(meal.id);}} aria-label="Delete meal" className="w-9 h-9 flex items-center justify-center rounded-full text-outline hover:text-error hover:bg-error-container transition-all">
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                      <span className="material-symbols-outlined text-outline text-[20px] transition-transform duration-200" style={{transform:isExp?'rotate(180deg)':'rotate(0deg)'}}>expand_more</span>
                     </div>
                   </div>
-                )}
-              </div>
-            )}
-          </article>
-        );
-      })}
-
-      {/* ── Add Meal Form ── */}
-      {showForm ? (
-        <form
-          onSubmit={handleSave}
-          className="bg-surface-container-low rounded-2xl border border-outline-variant/30 p-5 flex flex-col gap-4 mb-4"
-        >
-          <div className="flex items-center justify-between border-b border-outline-variant pb-3">
-            <h2 className="font-h2 text-h2 text-on-surface">
-              {editingId ? '✏️ Edit Meal' : 'Log a Meal'}
-            </h2>
-            {editingId && (
-              <span className="text-xs bg-primary-fixed text-on-primary-fixed px-2 py-1 rounded-full font-bold">
-                Editing
-              </span>
-            )}
+                  {isExp&&(meal.protein||meal.carbs||meal.fats)&&(
+                    <div className="px-4 pb-4 border-t border-outline-variant/10 pt-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        {meal.protein&&<div className="bg-blue-50 rounded-xl px-3 py-2 text-center"><p className="font-black text-[15px] text-blue-700">{meal.protein}<span className="text-xs font-normal">g</span></p><p className="text-xs font-bold text-blue-600 opacity-80">Protein</p></div>}
+                        {meal.carbs&&<div className="bg-amber-50 rounded-xl px-3 py-2 text-center"><p className="font-black text-[15px] text-amber-700">{meal.carbs}<span className="text-xs font-normal">g</span></p><p className="text-xs font-bold text-amber-600 opacity-80">Carbs</p></div>}
+                        {meal.fats&&<div className="bg-rose-50 rounded-xl px-3 py-2 text-center"><p className="font-black text-[15px] text-rose-700">{meal.fats}<span className="text-xs font-normal">g</span></p><p className="text-xs font-bold text-rose-600 opacity-80">Fats</p></div>}
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
+        )}
+      </section>
 
-          {/* Meal type selector */}
-          <div className="flex flex-col gap-1">
-            <label className="font-label-bold text-sm text-on-surface-variant">Meal Type</label>
-            <div className="flex flex-wrap gap-2">
-              {MEAL_TYPES.map((type) => {
-                const c = MEAL_TYPE_COLORS[type];
-                const selected = form.mealType === type;
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => set('mealType', type)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-bold transition-all border-2 ${
-                      selected
-                        ? `${c.bg} ${c.text} border-transparent shadow`
-                        : 'border-outline-variant text-on-surface-variant bg-surface hover:bg-surface-container'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[14px] mr-1 align-middle" style={{ fontVariationSettings: "'FILL' 1" }}>
-                      {MEAL_TYPE_ICONS[type]}
-                    </span>
-                    {type}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+      {/* FAB */}
+      <button onClick={openAdd} aria-label="Log a meal"
+        className="fixed z-30 bg-primary text-on-primary shadow-[0_6px_24px_rgba(0,93,172,0.45)] rounded-2xl flex items-center gap-2 px-5 py-3.5 font-black text-[15px] transition-all hover:scale-105 active:scale-95"
+        style={{bottom:'calc(112px + env(safe-area-inset-bottom))',right:'20px'}}>
+        <span className="material-symbols-outlined text-[22px]" style={{fontVariationSettings:"'FILL' 1"}}>add</span>
+        Log Meal
+      </button>
 
-          {/* Meal name & date */}
-          <div className="grid grid-cols-[2fr_1fr] gap-3">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="meal-name" className="font-label-bold text-sm text-on-surface-variant">Meal Name <span className="text-error">*</span></label>
-              <input
-                id="meal-name" type="text" required placeholder="e.g. Oatmeal with banana"
-                className="input-field"
-                value={form.mealName} onChange={(e) => set('mealName', e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="meal-date" className="font-label-bold text-sm text-on-surface-variant">Date <span className="text-error">*</span></label>
-              <input
-                id="meal-date" type="date" required
-                className="input-field"
-                value={form.date} onChange={(e) => set('date', e.target.value)}
-              />
-            </div>
-          </div>
+      {/* Bottom sheet */}
+      {showForm&&(
+        <>
+          <div className="fixed inset-0 bg-black/40 z-[200] backdrop-blur-sm" onClick={()=>setShowForm(false)} aria-hidden="true"/>
+          <div role="dialog" aria-modal="true" aria-label={editingId?'Edit Meal':'Log Meal'}
+            className="fixed bottom-0 left-0 right-0 z-[300] bg-surface rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.18)] max-w-[600px] mx-auto animate-[slideUp_0.25s_ease-out] flex flex-col"
+            style={{maxHeight:'92vh'}}>
 
-          {/* Weight + Calories row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="font-label-bold text-sm text-on-surface-variant">Weight (g)</label>
-              <input
-                type="number" placeholder="e.g. 250" min="0"
-                className="input-field"
-                value={form.weight} onChange={(e) => set('weight', e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="font-label-bold text-sm text-on-surface-variant">Calories (kcal)</label>
-              <input
-                type="number" placeholder="e.g. 350" min="0"
-                className="input-field"
-                value={form.calories} onChange={(e) => set('calories', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Macros row */}
-          <div>
-            <p className="font-label-bold text-sm text-on-surface-variant mb-2">Macronutrients</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-primary font-bold">Protein (g)</label>
-                <input
-                  type="number" placeholder="e.g. 20" min="0"
-                  className="input-field"
-                  value={form.protein} onChange={(e) => set('protein', e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-tertiary font-bold">Carbs (g)</label>
-                <input
-                  type="number" placeholder="e.g. 45" min="0"
-                  className="input-field"
-                  value={form.carbs} onChange={(e) => set('carbs', e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-on-surface-variant font-bold">Fats (g)</label>
-                <input
-                  type="number" placeholder="e.g. 8" min="0"
-                  className="input-field"
-                  value={form.fats} onChange={(e) => set('fats', e.target.value)}
-                />
+            {/* Header */}
+            <div className="flex-shrink-0 px-5 pt-4">
+              <div className="w-10 h-1 bg-outline-variant rounded-full mx-auto mb-4"/>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-black text-[20px] text-on-surface">{editingId?'Edit Meal':'Log a Meal'}</h2>
+                <button onClick={()=>setShowForm(false)} aria-label="Close" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
+                  <span className="material-symbols-outlined text-[22px] text-on-surface-variant">close</span>
+                </button>
               </div>
             </div>
-          </div>
 
-          {/* Micronutrients toggle */}
-          <button
-            type="button"
-            onClick={() => setShowMicro((v) => !v)}
-            className="flex items-center gap-2 text-sm font-bold text-on-surface-variant hover:text-primary transition-colors self-start"
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              {showMicro ? 'expand_less' : 'expand_more'}
-            </span>
-            {showMicro ? 'Hide' : 'Add'} Micronutrients (optional)
-          </button>
+            {/* Scrollable fields */}
+            <form id="meal-form" onSubmit={handleSave} className="flex-1 overflow-y-auto px-5 flex flex-col gap-4 pb-2">
+              {/* Meal type picker */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Meal Type</label>
+                <div className="flex flex-wrap gap-2">
+                  {MEAL_TYPES.map(t=>{
+                    const c=MEAL_COLORS[t]; const sel=form.mealType===t;
+                    return (
+                      <button key={t} type="button" onClick={()=>setForm(f=>({...f,mealType:t}))}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all
+                          ${sel?`${c.bg} ${c.text} border-transparent shadow`:'border-outline-variant text-on-surface-variant bg-surface hover:bg-surface-container'}`}>
+                        <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings:"'FILL' 1"}}>{MEAL_ICONS[t]}</span>
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {showMicro && (
-            <div className="bg-surface-container rounded-xl p-4 flex flex-col gap-3">
-              <p className="font-label-bold text-xs text-on-surface-variant uppercase tracking-wider">Micronutrients</p>
+              {/* Name */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="meal-name" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Meal Name <span className="text-error">*</span></label>
+                <input id="meal-name" type="text" required placeholder="e.g. Oatmeal with banana"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] bg-surface-container-lowest transition-colors"
+                  value={form.mealName} onChange={e=>setForm(f=>({...f,mealName:e.target.value}))} autoFocus/>
+              </div>
+
+              {/* Date */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="meal-date" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Date <span className="text-error">*</span></label>
+                <input id="meal-date" type="date" required
+                  className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] bg-surface-container-lowest transition-colors"
+                  value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
+              </div>
+
+              {/* Weight + Calories */}
               <div className="grid grid-cols-2 gap-3">
-                <MicroInput label="Fiber (g)"     placeholder="e.g. 5"   value={form.fiber}    onChange={(e) => set('fiber', e.target.value)} />
-                <MicroInput label="Sugar (g)"     placeholder="e.g. 10"  value={form.sugar}    onChange={(e) => set('sugar', e.target.value)} />
-                <MicroInput label="Sodium (mg)"   placeholder="e.g. 300" value={form.sodium}   onChange={(e) => set('sodium', e.target.value)} />
-                <MicroInput label="Vitamin C (mg)"placeholder="e.g. 30"  value={form.vitaminC} onChange={(e) => set('vitaminC', e.target.value)} />
-                <MicroInput label="Calcium (mg)"  placeholder="e.g. 100" value={form.calcium}  onChange={(e) => set('calcium', e.target.value)} />
-                <MicroInput label="Iron (mg)"     placeholder="e.g. 2"   value={form.iron}     onChange={(e) => set('iron', e.target.value)} />
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="meal-weight" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Weight (g)</label>
+                  <input id="meal-weight" type="number" min="0" placeholder="e.g. 250"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] bg-surface-container-lowest transition-colors"
+                    value={form.weight} onChange={e=>setForm(f=>({...f,weight:e.target.value}))}/>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="meal-cal" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Calories</label>
+                  <input id="meal-cal" type="number" min="0" placeholder="e.g. 350"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] bg-surface-container-lowest transition-colors"
+                    value={form.calories} onChange={e=>setForm(f=>({...f,calories:e.target.value}))}/>
+                </div>
               </div>
+
+              {/* Macros */}
+              <div className="flex flex-col gap-2 pb-2">
+                <label className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Macros</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[['protein','Protein (g)','text-blue-700'],['carbs','Carbs (g)','text-amber-700'],['fats','Fats (g)','text-rose-700']].map(([field,lbl,cls])=>(
+                    <div key={field} className="flex flex-col gap-1">
+                      <label htmlFor={`meal-${field}`} className={`text-xs font-black ${cls}`}>{lbl}</label>
+                      <input id={`meal-${field}`} type="number" min="0" placeholder="0"
+                        className="w-full px-3 py-2.5 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[15px] bg-surface-container-lowest transition-colors"
+                        value={form[field]} onChange={e=>setForm(f=>({...f,[field]:e.target.value}))}/>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </form>
+
+            {/* Sticky actions */}
+            <div className="flex-shrink-0 flex gap-3 px-5 pt-3 pb-5 border-t border-outline-variant/20 bg-surface"
+              style={{paddingBottom:'calc(20px + env(safe-area-inset-bottom))'}}>
+              <button type="button" onClick={()=>setShowForm(false)}
+                className="flex-1 py-4 rounded-2xl font-bold text-[16px] text-on-surface bg-surface-container hover:bg-surface-container-high transition-colors active:scale-[0.98]">
+                Cancel
+              </button>
+              <button type="submit" form="meal-form"
+                className="flex-1 py-4 rounded-2xl font-bold text-[16px] text-on-primary bg-primary shadow-lg hover:bg-primary-container transition-colors active:scale-[0.98]">
+                {editingId?'Update Meal':'Save Meal'}
+              </button>
             </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="flex-1 bg-surface-container p-3 rounded-lg font-button text-on-surface hover:bg-surface-dim transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 bg-primary text-on-primary rounded-lg font-button p-3 shadow hover:bg-on-primary-fixed-variant transition-colors"
-            >
-              {editingId ? 'Update Meal' : 'Save Meal'}
-            </button>
           </div>
-        </form>
-      ) : (
-        <div className="mt-2 pb-10">
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-full min-h-[64px] bg-surface-container border-2 border-dashed border-outline font-button text-button text-on-surface-variant rounded-xl flex justify-center items-center gap-3 hover:bg-surface-container-high transition-colors active:scale-[0.98]"
-          >
-            <span className="material-symbols-outlined text-3xl">add</span>
-            Log Meal
-          </button>
-        </div>
+        </>
       )}
+
+      <style>{`@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
     </main>
-  );
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function MacroBadge({ label, value, unit, color }) {
-  if (!value) return (
-    <div className="flex flex-col">
-      <span className={`font-h2 text-[18px] ${color}`}>—</span>
-      <span className="text-xs text-on-surface-variant">{label}</span>
-    </div>
-  );
-  return (
-    <div className="flex flex-col">
-      <span className={`font-black text-[18px] ${color}`}>{value}<span className="text-xs font-normal ml-0.5">{unit}</span></span>
-      <span className="text-xs text-on-surface-variant">{label}</span>
-    </div>
-  );
-}
-
-function MacroDetail({ label, value, unit, color }) {
-  return (
-    <div className={`${color} rounded-lg px-3 py-2 text-center`}>
-      <p className="font-black text-[16px]">{value}<span className="text-xs font-normal ml-0.5">{unit}</span></p>
-      <p className="text-xs font-bold opacity-80">{label}</p>
-    </div>
-  );
-}
-
-function MicroRow({ label, value }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-xs text-on-surface-variant">{label}</span>
-      <span className="font-bold text-[14px] text-on-surface">{value}</span>
-    </div>
-  );
-}
-
-function MicroInput({ label, placeholder, value, onChange }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={`micro-${label}`} className="text-xs font-bold text-on-surface-variant">{label}</label>
-      <input
-        id={`micro-${label}`} type="number" placeholder={placeholder} min="0"
-        className="input-field text-[14px] py-2"
-        value={value} onChange={onChange}
-      />
-    </div>
   );
 }

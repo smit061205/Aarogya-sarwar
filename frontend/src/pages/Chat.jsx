@@ -15,9 +15,9 @@ function getPatientContext() {
 }
 
 const DOCTORS = [
-  { id: 'doc1', name: 'Dr. Jane Doe', specialty: 'General Physician', initials: 'JD', color: 'bg-blue-600' },
-  { id: 'doc2', name: 'Dr. John Smith', specialty: 'Cardiologist', initials: 'JS', color: 'bg-rose-600' },
-  { id: 'doc3', name: 'Dr. Emily Chen', specialty: 'Endocrinologist', initials: 'EC', color: 'bg-emerald-600' },
+  { id: 'doc1', name: 'Dr. Priya Sharma', specialty: 'General Physician', initials: 'PS', color: 'bg-blue-600' },
+  { id: 'doc2', name: 'Dr. Rahul Mehta', specialty: 'Cardiologist', initials: 'RM', color: 'bg-rose-600' },
+  { id: 'doc3', name: 'Dr. Ananya Desai', specialty: 'Endocrinologist', initials: 'AD', color: 'bg-emerald-600' },
   { id: 'doc4', name: 'Dr. Aarav Patel', specialty: 'Nutritionist', initials: 'AP', color: 'bg-amber-600' }
 ];
 

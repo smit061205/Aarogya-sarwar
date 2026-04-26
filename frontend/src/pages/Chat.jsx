@@ -45,7 +45,8 @@ export default function Chat() {
     const { medications, meals } = getPatientContext();
 
     try {
-      const res = await fetch('http://localhost:8000/api/chat', {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -90,7 +90,7 @@ export default function Medications() {
             </div>
             <button
               onClick={() => handleDelete(med.id)}
-              className="text-outline hover:text-error transition-colors p-1 rounded-full hover:bg-error-container"
+              className="text-outline hover:text-error transition-colors p-1 rounded-full hover:bg-error-container min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Delete medication"
             >
               <span className="material-symbols-outlined text-[20px]">delete</span>
@@ -137,8 +137,9 @@ export default function Medications() {
           </h2>
 
           <div className="flex flex-col gap-1">
-            <label className="font-label-bold text-sm text-on-surface-variant">Medicine Name *</label>
+            <label htmlFor="med-name" className="font-label-bold text-sm text-on-surface-variant">Medicine Name *</label>
             <input
+              id="med-name"
               type="text"
               placeholder="e.g. Aspirin"
               required
@@ -149,8 +150,9 @@ export default function Medications() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="font-label-bold text-sm text-on-surface-variant">Dosage</label>
+            <label htmlFor="med-dosage" className="font-label-bold text-sm text-on-surface-variant">Dosage</label>
             <input
+              id="med-dosage"
               type="text"
               placeholder="e.g. 1 Tablet (81mg)"
               className="p-3 rounded-lg border-2 border-outline-variant focus:border-primary focus:outline-none shadow-sm transition-colors"
@@ -161,8 +163,9 @@ export default function Medications() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
-              <label className="font-label-bold text-sm text-on-surface-variant">Time</label>
+              <label htmlFor="med-time" className="font-label-bold text-sm text-on-surface-variant">Time</label>
               <input
+                id="med-time"
                 type="time"
                 className="p-3 rounded-lg border-2 border-outline-variant focus:border-primary focus:outline-none shadow-sm transition-colors"
                 value={newMed.time}
@@ -170,8 +173,9 @@ export default function Medications() {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="font-label-bold text-sm text-on-surface-variant">Date</label>
+              <label htmlFor="med-date" className="font-label-bold text-sm text-on-surface-variant">Date</label>
               <input
+                id="med-date"
                 type="date"
                 required
                 className="p-3 rounded-lg border-2 border-outline-variant focus:border-primary focus:outline-none shadow-sm transition-colors"

@@ -246,7 +246,7 @@ export default function Chat() {
             ${isListening ? 'bg-error text-white animate-pulse shadow-error/30' : 'bg-surface-container-highest text-on-surface'}`}
           aria-label="Toggle voice input"
         >
-          <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+          <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden="true">
             mic
           </span>
         </button>
@@ -259,6 +259,7 @@ export default function Chat() {
           <span
             className="material-symbols-outlined text-[24px]"
             style={{ fontVariationSettings: "'FILL' 1" }}
+            aria-hidden="true"
           >
             send
           </span>

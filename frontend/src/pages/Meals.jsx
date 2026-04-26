@@ -207,14 +207,14 @@ export default function Meals() {
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); handleEdit(meal); }}
-                  className="text-outline hover:text-primary transition-colors p-1.5 rounded-full hover:bg-primary-fixed"
+                  className="text-outline hover:text-primary transition-colors p-1.5 rounded-full hover:bg-primary-fixed min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Edit meal"
                 >
                   <span className="material-symbols-outlined text-[18px]">edit</span>
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(meal.id); }}
-                  className="text-outline hover:text-error transition-colors p-1.5 rounded-full hover:bg-error-container"
+                  className="text-outline hover:text-error transition-colors p-1.5 rounded-full hover:bg-error-container min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Delete meal"
                 >
                   <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -305,17 +305,17 @@ export default function Meals() {
           {/* Meal name & date */}
           <div className="grid grid-cols-[2fr_1fr] gap-3">
             <div className="flex flex-col gap-1">
-              <label className="font-label-bold text-sm text-on-surface-variant">Meal Name <span className="text-error">*</span></label>
+              <label htmlFor="meal-name" className="font-label-bold text-sm text-on-surface-variant">Meal Name <span className="text-error">*</span></label>
               <input
-                type="text" required placeholder="e.g. Oatmeal with banana"
+                id="meal-name" type="text" required placeholder="e.g. Oatmeal with banana"
                 className="input-field"
                 value={form.mealName} onChange={(e) => set('mealName', e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="font-label-bold text-sm text-on-surface-variant">Date <span className="text-error">*</span></label>
+              <label htmlFor="meal-date" className="font-label-bold text-sm text-on-surface-variant">Date <span className="text-error">*</span></label>
               <input
-                type="date" required
+                id="meal-date" type="date" required
                 className="input-field"
                 value={form.date} onChange={(e) => set('date', e.target.value)}
               />
@@ -469,9 +469,9 @@ function MicroRow({ label, value }) {
 function MicroInput({ label, placeholder, value, onChange }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-bold text-on-surface-variant">{label}</label>
+      <label htmlFor={`micro-${label}`} className="text-xs font-bold text-on-surface-variant">{label}</label>
       <input
-        type="number" placeholder={placeholder} min="0"
+        id={`micro-${label}`} type="number" placeholder={placeholder} min="0"
         className="input-field text-[14px] py-2"
         value={value} onChange={onChange}
       />

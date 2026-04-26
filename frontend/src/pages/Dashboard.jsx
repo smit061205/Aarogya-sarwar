@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 function getProfileName() {
   try {
     const p = JSON.parse(localStorage.getItem('aarogya_profile') || '{}');
-    return p.name || 'Jenish';
+    return p.name || 'Smit';
   } catch {
-    return 'Jenish';
+    return 'Smit';
   }
 }
 

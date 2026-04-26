@@ -84,7 +84,7 @@ export default function Chat() {
     // Grab fresh patient context right at send time so it always reflects latest data
     const { medications, meals } = getPatientContext();
     
-    let currentPatientName = 'Jenish';
+    let currentPatientName = 'Smit';
     try {
       const p = JSON.parse(localStorage.getItem('aarogya_profile') || '{}');
       if (p.name) currentPatientName = p.name;

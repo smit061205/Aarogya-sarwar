@@ -3,7 +3,7 @@ import { useState } from 'react';
 const PROFILE_KEY = 'aarogya_profile';
 
 const DEFAULT_PROFILE = {
-  name: 'Jenish',
+  name: 'Smit',
   age: '',
   bloodType: '',
   phone: '',
@@ -145,7 +145,7 @@ export default function Profile() {
               type="text"
               value={profile.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="e.g. Jenish Patel"
+              placeholder="e.g. Smit"
               className="input-field"
             />
           </Field>

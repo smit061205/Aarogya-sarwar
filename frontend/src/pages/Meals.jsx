@@ -79,32 +79,53 @@ export default function Meals() {
 
   // ── Notification scheduling ─────────────────────────────────────
   useEffect(() => {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!('Notification' in window)) return;
     const todayStr = getTodayStr();
     const pending = meals.filter(m => m.date === todayStr && m.time);
-    const timeouts = pending.map(meal => {
-      const [h, min] = meal.time.split(':').map(Number);
-      const fireAt = new Date();
-      fireAt.setHours(h, min, 0, 0);
-      const delay = fireAt - Date.now();
-      if (delay <= 0) return null;
-      return setTimeout(() => {
-        try {
-          const latest = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-          const todayMeals = latest.filter(m => m.date === todayStr);
-          const alreadyLogged = todayMeals.some(
-            m => m.mealType === meal.mealType && m.id !== meal.id
-          ) || todayMeals.find(m => m.id === meal.id);
-          if (alreadyLogged) return;
-          new Notification('🍽️ Meal Reminder', {
-            body: `Don't forget your ${meal.mealType}! You haven't logged "${meal.mealName}" yet.`,
-            icon: '/favicon.ico',
-            tag: meal.id,
-          });
-        } catch {}
-      }, delay);
-    }).filter(Boolean);
-    return () => timeouts.forEach(clearTimeout);
+    if (pending.length === 0) return;
+
+    const schedule = async () => {
+      let permission = Notification.permission;
+      if (permission === 'default') permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+
+      const timeouts = [];
+      const FIVE_MIN = 5 * 60 * 1000;
+
+      pending.forEach(meal => {
+        const [h, min] = meal.time.split(':').map(Number);
+        const fireAt = new Date();
+        fireAt.setHours(h, min, 0, 0);
+        const delay = fireAt - Date.now();
+
+        const notify = () => {
+          try {
+            const latest = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            // Only notify if the exact meal entry still exists (not deleted)
+            if (latest.find(m => m.id === meal.id)) {
+              new Notification('🍽️ Meal Reminder', {
+                body: `⏰ Time for your ${meal.mealType}: "${meal.mealName}"!`,
+                icon: '/favicon.ico',
+                tag: `meal_${meal.id}`,
+                requireInteraction: true,
+              });
+            }
+          } catch {}
+        };
+
+        if (delay <= 0 && delay >= -FIVE_MIN) {
+          notify();
+        } else if (delay > 0) {
+          timeouts.push(setTimeout(notify, delay));
+        }
+      });
+
+      return () => timeouts.forEach(clearTimeout);
+    };
+
+    let cleanup;
+    schedule().then(fn => { cleanup = fn; });
+    return () => { if (typeof cleanup === 'function') cleanup(); };
   }, [meals]);
 
   const prevMonth = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };

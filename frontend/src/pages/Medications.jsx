@@ -161,30 +161,54 @@ export default function Medications() {
 
   // ── Notification scheduling ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!('Notification' in window)) return;
     const todayStr = getTodayStr();
     const pending = meds.filter(m => m.date === todayStr && m.time && !m.taken);
-    const timeouts = pending.map(med => {
-      const [h, min] = med.time.split(':').map(Number);
-      const fireAt = new Date();
-      fireAt.setHours(h, min, 0, 0);
-      const delay = fireAt - Date.now();
-      if (delay <= 0) return null;
-      return setTimeout(() => {
-        try {
-          const latest = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-          const current = latest.find(m => m.id === med.id);
-          if (current && !current.taken) {
-            new Notification('💊 Medication Reminder', {
-              body: `Time to take ${med.name}${med.dosage ? ` — ${med.dosage}` : ''}!`,
-              icon: '/favicon.ico',
-              tag: med.id,
-            });
-          }
-        } catch {}
-      }, delay);
-    }).filter(Boolean);
-    return () => timeouts.forEach(clearTimeout);
+    if (pending.length === 0) return;
+
+    const schedule = async () => {
+      let permission = Notification.permission;
+      if (permission === 'default') permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+
+      const timeouts = [];
+      const FIVE_MIN = 5 * 60 * 1000;
+
+      pending.forEach(med => {
+        const [h, min] = med.time.split(':').map(Number);
+        const fireAt = new Date();
+        fireAt.setHours(h, min, 0, 0);
+        const delay = fireAt - Date.now();
+
+        const notify = () => {
+          try {
+            const latest = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const current = latest.find(m => m.id === med.id);
+            if (current && !current.taken) {
+              new Notification('💊 Medication Reminder', {
+                body: `⏰ Time to take ${med.name} — ${med.dosage}!`,
+                icon: '/favicon.ico',
+                tag: `med_${med.id}`,
+                requireInteraction: true,
+              });
+            }
+          } catch {}
+        };
+
+        if (delay <= 0 && delay >= -FIVE_MIN) {
+          // Just missed — fire immediately
+          notify();
+        } else if (delay > 0) {
+          timeouts.push(setTimeout(notify, delay));
+        }
+      });
+
+      return () => timeouts.forEach(clearTimeout);
+    };
+
+    let cleanup;
+    schedule().then(fn => { cleanup = fn; });
+    return () => { if (typeof cleanup === 'function') cleanup(); };
   }, [meds]);
 
   // ── Month navigation ────────────────────────────────────────────────────────
@@ -577,11 +601,12 @@ export default function Medications() {
               {/* Dosage */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="med-dosage" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">
-                  Dosage
+                  Dosage <span className="text-error">*</span>
                 </label>
                 <input
                   id="med-dosage"
                   type="text"
+                  required
                   placeholder="e.g. 1 Tablet (81mg)"
                   className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] text-on-surface bg-surface-container-lowest transition-colors"
                   value={newMed.dosage}
@@ -593,11 +618,12 @@ export default function Medications() {
               <div className="grid grid-cols-2 gap-3 pb-2">
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="med-time" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">
-                    Time
+                    Time <span className="text-error">*</span>
                   </label>
                   <input
                     id="med-time"
                     type="time"
+                    required
                     className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] text-on-surface bg-surface-container-lowest transition-colors"
                     value={newMed.time}
                     onChange={(e) => setNewMed({ ...newMed, time: e.target.value })}

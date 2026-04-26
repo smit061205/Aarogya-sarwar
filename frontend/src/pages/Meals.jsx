@@ -79,14 +79,17 @@ export default function Meals() {
 
   // ── Notification scheduling ─────────────────────────────────────
   useEffect(() => {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window)) { console.log('[Notif-Meals] API not supported'); return; }
     const todayStr = getTodayStr();
     const pending = meals.filter(m => m.date === todayStr && m.time);
+    console.log('[Notif-Meals] Pending today:', pending.length, pending.map(m=>`${m.mealType}@${m.time}`));
     if (pending.length === 0) return;
 
     const schedule = async () => {
       let permission = Notification.permission;
+      console.log('[Notif-Meals] Permission before:', permission);
       if (permission === 'default') permission = await Notification.requestPermission();
+      console.log('[Notif-Meals] Permission after:', permission);
       if (permission !== 'granted') return;
 
       const timeouts = [];
@@ -97,11 +100,12 @@ export default function Meals() {
         const fireAt = new Date();
         fireAt.setHours(h, min, 0, 0);
         const delay = fireAt - Date.now();
+        console.log(`[Notif-Meals] "${meal.mealType}" at ${meal.time}, delay=${Math.round(delay/1000)}s`);
 
         const notify = () => {
+          console.log(`[Notif-Meals] Firing for "${meal.mealType}"`);
           try {
             const latest = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-            // Only notify if the exact meal entry still exists (not deleted)
             if (latest.find(m => m.id === meal.id)) {
               new Notification('🍽️ Meal Reminder', {
                 body: `⏰ Time for your ${meal.mealType}: "${meal.mealName}"!`,
@@ -109,14 +113,17 @@ export default function Meals() {
                 tag: `meal_${meal.id}`,
                 requireInteraction: true,
               });
-            }
-          } catch {}
+            } else { console.log(`[Notif-Meals] "${meal.mealType}" already removed, skipping`); }
+          } catch(err) { console.error('[Notif-Meals] Error:', err); }
         };
 
         if (delay <= 0 && delay >= -FIVE_MIN) {
+          console.log(`[Notif-Meals] "${meal.mealType}" just missed — firing now`);
           notify();
         } else if (delay > 0) {
           timeouts.push(setTimeout(notify, delay));
+        } else {
+          console.log(`[Notif-Meals] "${meal.mealType}" too old (${Math.round(-delay/60000)}m), skipping`);
         }
       });
 
@@ -231,17 +238,27 @@ export default function Meals() {
 
       {/* Day panel */}
       <section className="flex flex-col gap-3">
-        <div>
-          <p className="text-[11px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Selected Day</p>
-          <h2 className="font-bold text-[16px] text-on-surface leading-tight">{formatDisplay(selectedDate)}</h2>
-          {totalCals>0&&<p className="text-[13px] font-black text-primary mt-1">🔥 {totalCals} kcal total</p>}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Selected Day</p>
+            <h2 className="font-bold text-[16px] text-on-surface leading-tight">{formatDisplay(selectedDate)}</h2>
+            {totalCals>0&&<p className="text-[13px] font-black text-primary mt-1">🔥 {totalCals} kcal total</p>}
+          </div>
+          <button
+            onClick={openAdd}
+            aria-label="Add meal for this day"
+            className="flex items-center gap-1.5 bg-primary text-on-primary px-4 py-2.5 rounded-full font-bold text-[14px] shadow-md hover:bg-primary-container transition-colors active:scale-95 min-h-[44px]"
+          >
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">add</span>
+            Add Meal
+          </button>
         </div>
 
         {mealsForDay.length===0 ? (
           <div className="text-center py-10 bg-surface-container-low rounded-2xl border border-dashed border-outline-variant/40">
             <span className="material-symbols-outlined text-[40px] text-outline mb-2 block">restaurant</span>
             <p className="font-bold text-[14px] text-on-surface-variant">No meals logged for this day.</p>
-            <p className="text-[13px] text-outline mt-1">Tap "+ Log Meal" to add one.</p>
+            <p className="text-[13px] text-outline mt-1">Tap "Add Meal" to schedule one.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3 pb-4">
@@ -292,18 +309,18 @@ export default function Meals() {
       </section>
 
       {/* FAB */}
-      <button onClick={openAdd} aria-label="Log a meal"
+      <button onClick={openAdd} aria-label="Add a meal"
         className="fixed z-30 bg-primary text-on-primary shadow-[0_6px_24px_rgba(0,93,172,0.45)] rounded-2xl flex items-center gap-2 px-5 py-3.5 font-black text-[15px] transition-all hover:scale-105 active:scale-95"
         style={{bottom:'calc(112px + env(safe-area-inset-bottom))',right:'20px'}}>
         <span className="material-symbols-outlined text-[22px]" style={{fontVariationSettings:"'FILL' 1"}}>add</span>
-        Log Meal
+        Add Meal
       </button>
 
       {/* Bottom sheet */}
       {showForm&&(
         <>
           <div className="fixed inset-0 bg-black/40 z-[200] backdrop-blur-sm" onClick={()=>setShowForm(false)} aria-hidden="true"/>
-          <div role="dialog" aria-modal="true" aria-label={editingId?'Edit Meal':'Log Meal'}
+          <div role="dialog" aria-modal="true" aria-label={editingId?'Edit Meal':'Add Meal'}
             className="fixed bottom-0 left-0 right-0 z-[300] bg-surface rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.18)] max-w-[600px] mx-auto animate-[slideUp_0.25s_ease-out] flex flex-col"
             style={{maxHeight:'92vh'}}>
 
@@ -311,8 +328,8 @@ export default function Meals() {
             <div className="flex-shrink-0 px-5 pt-4">
               <div className="w-10 h-1 bg-outline-variant rounded-full mx-auto mb-4"/>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-black text-[20px] text-on-surface">{editingId?'Edit Meal':'Log a Meal'}</h2>
-                <button onClick={()=>setShowForm(false)} aria-label="Close" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
+                <h2 className="font-black text-[20px] text-on-surface">{editingId?'Edit Meal':'Add Meal'}</h2>
+                <button onClick={()=>setShowForm(false)} aria-label="Close form" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
                   <span className="material-symbols-outlined text-[22px] text-on-surface-variant">close</span>
                 </button>
               </div>
@@ -367,14 +384,14 @@ export default function Meals() {
               {/* Weight + Calories */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="meal-weight" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Weight (g)</label>
-                  <input id="meal-weight" type="number" min="0" placeholder="e.g. 250"
+                  <label htmlFor="meal-weight" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Weight (g) <span className="text-error">*</span></label>
+                  <input id="meal-weight" type="number" min="0" placeholder="e.g. 250" required
                     className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] bg-surface-container-lowest transition-colors"
                     value={form.weight} onChange={e=>setForm(f=>({...f,weight:e.target.value}))}/>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="meal-cal" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Calories</label>
-                  <input id="meal-cal" type="number" min="0" placeholder="e.g. 350"
+                  <label htmlFor="meal-cal" className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Calories <span className="text-error">*</span></label>
+                  <input id="meal-cal" type="number" min="0" placeholder="e.g. 350" required
                     className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] bg-surface-container-lowest transition-colors"
                     value={form.calories} onChange={e=>setForm(f=>({...f,calories:e.target.value}))}/>
                 </div>
@@ -386,8 +403,8 @@ export default function Meals() {
                 <div className="grid grid-cols-3 gap-2">
                   {[['protein','Protein (g)','text-blue-700'],['carbs','Carbs (g)','text-amber-700'],['fats','Fats (g)','text-rose-700']].map(([field,lbl,cls])=>(
                     <div key={field} className="flex flex-col gap-1">
-                      <label htmlFor={`meal-${field}`} className={`text-xs font-black ${cls}`}>{lbl}</label>
-                      <input id={`meal-${field}`} type="number" min="0" placeholder="0"
+                      <label htmlFor={`meal-${field}`} className={`text-xs font-black ${cls}`}>{lbl} <span className="text-error">*</span></label>
+                      <input id={`meal-${field}`} type="number" min="0" placeholder="0" required
                         className="w-full px-3 py-2.5 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[15px] bg-surface-container-lowest transition-colors"
                         value={form[field]} onChange={e=>setForm(f=>({...f,[field]:e.target.value}))}/>
                     </div>

@@ -29,7 +29,8 @@ function formatDisplay(dateStr) {
   return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 }
 
-function generateDates(startDateStr, repeatMode, repeatCount, repeatWeekDays) {
+function generateDates(startDateStr, repeatMode, rawCount, repeatWeekDays) {
+  const repeatCount = Math.max(1, parseInt(rawCount, 10) || 1);
   if (repeatMode === 'none') return [startDateStr];
   const [sy, sm, sd] = startDateStr.split('-').map(Number);
   const dates = new Set();
@@ -356,7 +357,7 @@ export default function Meals() {
                       <input type="number" min="2" max="365"
                         className="w-16 px-2 py-1.5 text-center rounded-lg border-2 border-primary font-black text-[15px] text-primary focus:outline-none bg-surface"
                         value={form.repeatCount}
-                        onChange={e=>setForm(f=>({...f,repeatCount:Math.max(2,Number(e.target.value))}))}/>
+                        onChange={e=>setForm(f=>({...f,repeatCount:e.target.value}))}/>
                       <span className="text-[14px] font-bold text-on-surface">days</span>
                     </div>
                   )}
@@ -382,7 +383,7 @@ export default function Meals() {
                         <input type="number" min="1" max="52"
                           className="w-14 px-2 py-1.5 text-center rounded-lg border-2 border-primary font-black text-[15px] text-primary focus:outline-none bg-surface"
                           value={form.repeatCount}
-                          onChange={e=>setForm(f=>({...f,repeatCount:Math.max(1,Number(e.target.value))}))}/>
+                          onChange={e=>setForm(f=>({...f,repeatCount:e.target.value}))}/>
                         <span className="text-[14px] font-bold text-on-surface">weeks</span>
                       </div>
                     </div>

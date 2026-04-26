@@ -221,6 +221,9 @@ export default function Chat() {
             <span className="font-body-md text-[13px] text-on-surface-variant font-bold">{selectedDoctor.specialty} — Online</span>
           </div>
         </div>
+        <button onClick={() => alert('Video call appointments will be available soon!')} className="w-11 h-11 rounded-full bg-primary-fixed text-primary hover:bg-primary-fixed-dim flex items-center justify-center transition-colors active:scale-90 shadow-sm" aria-label="Book Video Call">
+          <span className="material-symbols-outlined text-[24px]" style={{fontVariationSettings:"'FILL' 1"}}>videocam</span>
+        </button>
       </div>
 
       {/* Patient context awareness pill */}

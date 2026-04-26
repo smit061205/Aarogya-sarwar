@@ -24,7 +24,47 @@ export default function Chat() {
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const bottomRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition && !recognitionRef.current) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      };
+      recognition.onerror = (event) => {
+        console.error('Speech error:', event.error);
+        setIsListening(false);
+      };
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const toggleListening = (e) => {
+    e.preventDefault();
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      try {
+        recognitionRef.current?.start();
+        setIsListening(true);
+      } catch (err) {
+        console.error("Mic start failed", err);
+      }
+    }
+  };
 
   // Scroll to bottom on new message
   useEffect(() => {
@@ -91,7 +131,7 @@ export default function Chat() {
   const totalMeals = meals.length;
 
   return (
-    <div className="flex flex-col w-full mt-4" style={{ height: 'calc(100vh - 195px)' }}>
+    <div className="flex flex-col w-full mt-4 flex-1" style={{ height: 'calc(100svh - 180px)' }}>
       {/* AI Header */}
       <div className="bg-surface-container-low px-4 py-4 flex items-center gap-4 shadow-[0_4px_20px_rgba(0,0,0,0.05)] rounded-2xl mb-3">
         <div className="w-14 h-14 rounded-full bg-primary-container flex-shrink-0 flex items-center justify-center shadow-md">
@@ -179,18 +219,29 @@ export default function Chat() {
       {/* Input bar */}
       <form
         onSubmit={sendMessage}
-        className="flex items-center gap-3 pt-3 border-t border-outline-variant/30 pb-2"
+        className="flex items-center gap-2 pt-3 border-t border-outline-variant/30 pb-2"
       >
         <div className="flex-1">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
-            className="w-full min-h-[52px] bg-surface border-2 border-outline-variant focus:border-primary rounded-[28px] py-3 px-5 font-body-lg text-[16px] text-on-surface placeholder:text-outline transition-colors outline-none shadow-sm disabled:opacity-60"
+            className="w-full min-h-[52px] bg-surface border-2 border-outline-variant focus:border-primary rounded-[28px] py-3 px-4 font-body-lg text-[16px] text-on-surface placeholder:text-outline transition-colors outline-none shadow-sm disabled:opacity-60"
             placeholder="Ask HealthAssist anything…"
             type="text"
           />
         </div>
+        <button
+          type="button"
+          onClick={toggleListening}
+          className={`w-[52px] h-[52px] flex-shrink-0 rounded-full flex items-center justify-center shadow-md active:scale-95 transition-all
+            ${isListening ? 'bg-error text-white animate-pulse shadow-error/30' : 'bg-surface-container-highest text-on-surface'}`}
+          aria-label="Toggle voice input"
+        >
+          <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            mic
+          </span>
+        </button>
         <button
           type="submit"
           disabled={!input.trim() || isLoading}

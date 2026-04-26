@@ -44,6 +44,13 @@ export default function Chat() {
       recognition.onerror = (event) => {
         console.error('Speech error:', event.error);
         setIsListening(false);
+        if (event.error === 'not-allowed') {
+          alert('Microphone access denied. Please enable mic permissions in your browser settings.');
+        } else if (event.error === 'no-speech') {
+          // ignore silent errors
+        } else {
+          alert(`Microphone error: ${event.error}`);
+        }
       };
       recognition.onend = () => {
         setIsListening(false);
@@ -54,14 +61,20 @@ export default function Chat() {
 
   const toggleListening = (e) => {
     e.preventDefault();
+    if (!recognitionRef.current) {
+      alert("Voice input is not fully supported by this browser. Please use Chrome on Android/Desktop or Safari on iOS.");
+      return;
+    }
+    
     if (isListening) {
-      recognitionRef.current?.stop();
+      recognitionRef.current.stop();
     } else {
       try {
-        recognitionRef.current?.start();
+        recognitionRef.current.start();
         setIsListening(true);
       } catch (err) {
         console.error("Mic start failed", err);
+        alert("Microphone failed to start. Please refresh the page and try again.");
       }
     }
   };

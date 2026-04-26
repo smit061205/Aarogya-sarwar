@@ -17,7 +17,7 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const toDateStr = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 const getTodayStr = () => { const d=new Date(); return toDateStr(d.getFullYear(),d.getMonth(),d.getDate()); };
 
-const EMPTY_FORM = { mealName:'', mealType:'Breakfast', date:getTodayStr(), weight:'', calories:'', protein:'', carbs:'', fats:'' };
+const EMPTY_FORM = { mealName:'', mealType:'Breakfast', date:getTodayStr(), weight:'', calories:'', protein:'', carbs:'', fats:'', repeatMode:'none', repeatCount:7, repeatWeekDays:[] };
 
 function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]; } catch { return []; } }
 function save(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
@@ -27,6 +27,29 @@ function formatDisplay(dateStr) {
   if (!dateStr) return '';
   const [y,m,d] = dateStr.split('-').map(Number);
   return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+
+function generateDates(startDateStr, repeatMode, repeatCount, repeatWeekDays) {
+  if (repeatMode === 'none') return [startDateStr];
+  const [sy, sm, sd] = startDateStr.split('-').map(Number);
+  const dates = new Set();
+  if (repeatMode === 'daily') {
+    for (let i = 0; i < repeatCount; i++) {
+      const dt = new Date(sy, sm - 1, sd + i);
+      dates.add(toDateStr(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+    }
+  } else if (repeatMode === 'weekly') {
+    const startDOW = new Date(sy, sm - 1, sd).getDay();
+    for (let week = 0; week < repeatCount; week++) {
+      for (const wd of repeatWeekDays) {
+        const diff = (wd - startDOW) + week * 7;
+        if (week === 0 && diff < 0) continue;
+        const dt = new Date(sy, sm - 1, sd + diff);
+        dates.add(toDateStr(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+      }
+    }
+  }
+  return [...dates].sort();
 }
 
 export default function Meals() {
@@ -56,7 +79,7 @@ export default function Meals() {
   const prevMonth = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
   const nextMonth = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
 
-  const openAdd = () => { setForm({...EMPTY_FORM, date:selectedDate}); setEditingId(null); setShowForm(true); };
+  const openAdd = () => { setForm({...EMPTY_FORM, date:selectedDate, repeatMode:'none', repeatCount:7, repeatWeekDays:[]}); setEditingId(null); setShowForm(true); };
   const openEdit = (meal) => {
     const {id,timestamp,...fields}=meal;
     setForm({...EMPTY_FORM,...fields});
@@ -71,8 +94,14 @@ export default function Meals() {
     if (editingId) {
       updated = meals.map(m => m.id===editingId ? {...m,...form,mealName:form.mealName.trim()} : m);
     } else {
-      const newMeal = {...form, id:Date.now().toString(), mealName:form.mealName.trim(), timestamp:new Date().toISOString()};
-      updated = [...meals, newMeal];
+      const seriesId = Date.now().toString();
+      const dates = generateDates(form.date||getTodayStr(), form.repeatMode, form.repeatCount, form.repeatWeekDays);
+      const newEntries = dates.map((date, i) => ({
+        ...form, id:`${seriesId}_${i}`, seriesId,
+        mealName: form.mealName.trim(), date,
+        timestamp: new Date().toISOString(),
+      }));
+      updated = [...meals, ...newEntries];
     }
     setMeals(updated); save(updated);
     setShowForm(false); setEditingId(null);
@@ -303,6 +332,70 @@ export default function Meals() {
                   ))}
                 </div>
               </div>
+
+              {/* ── Repeat section ─────────────────────────────────────── */}
+              {!editingId && (
+                <div className="flex flex-col gap-3 pb-2">
+                  <label className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Repeat</label>
+                  <div className="flex gap-2">
+                    {[['none','No Repeat','block'],['daily','Daily','today'],['weekly','Weekly','date_range']].map(([mode,label,icon])=>(
+                      <button key={mode} type="button"
+                        onClick={()=>setForm(f=>({...f,repeatMode:mode}))}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-[12px] font-black transition-all
+                          ${form.repeatMode===mode?'border-primary bg-primary-fixed text-primary':'border-outline-variant text-on-surface-variant bg-surface hover:bg-surface-container'}`}>
+                        <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings:"'FILL' 1"}}>{icon}</span>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {form.repeatMode==='daily'&&(
+                    <div className="flex items-center gap-3 bg-surface-container rounded-xl px-4 py-3">
+                      <span className="material-symbols-outlined text-primary text-[20px]">repeat</span>
+                      <span className="text-[14px] font-bold text-on-surface">Repeat every day for</span>
+                      <input type="number" min="2" max="365"
+                        className="w-16 px-2 py-1.5 text-center rounded-lg border-2 border-primary font-black text-[15px] text-primary focus:outline-none bg-surface"
+                        value={form.repeatCount}
+                        onChange={e=>setForm(f=>({...f,repeatCount:Math.max(2,Number(e.target.value))}))}/>
+                      <span className="text-[14px] font-bold text-on-surface">days</span>
+                    </div>
+                  )}
+
+                  {form.repeatMode==='weekly'&&(
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between gap-1">
+                        {['S','M','T','W','T','F','S'].map((d,i)=>{
+                          const sel=form.repeatWeekDays.includes(i);
+                          return (
+                            <button key={i} type="button"
+                              onClick={()=>setForm(f=>({...f,repeatWeekDays:sel?f.repeatWeekDays.filter(x=>x!==i):[...f.repeatWeekDays,i].sort()}))}
+                              className={`flex-1 h-9 rounded-full text-[13px] font-black transition-all
+                                ${sel?'bg-primary text-on-primary shadow-md':'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}>
+                              {d}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-3 bg-surface-container rounded-xl px-4 py-3">
+                        <span className="material-symbols-outlined text-primary text-[20px]">event_repeat</span>
+                        <span className="text-[14px] font-bold text-on-surface">For</span>
+                        <input type="number" min="1" max="52"
+                          className="w-14 px-2 py-1.5 text-center rounded-lg border-2 border-primary font-black text-[15px] text-primary focus:outline-none bg-surface"
+                          value={form.repeatCount}
+                          onChange={e=>setForm(f=>({...f,repeatCount:Math.max(1,Number(e.target.value))}))}/>
+                        <span className="text-[14px] font-bold text-on-surface">weeks</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {form.repeatMode!=='none'&&(
+                    <p className="text-[12px] font-bold text-primary bg-primary-fixed px-3 py-2 rounded-xl">
+                      📅 Will create {generateDates(form.date||getTodayStr(),form.repeatMode,form.repeatCount,form.repeatWeekDays).length} meal entries
+                      {form.repeatMode==='weekly'&&form.repeatWeekDays.length===0?' — select at least one day':''}
+                    </p>
+                  )}
+                </div>
+              )}
             </form>
 
             {/* Sticky actions */}

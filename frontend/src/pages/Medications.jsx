@@ -52,12 +52,37 @@ function formatDisplayDate(dateStr) {
 }
 
 function formatTime(timeStr) {
-  if (!timeStr) return "";
-  const [h, m] = timeStr.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
   const hour = h % 12 || 12;
-  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+  return `${hour}:${String(m).padStart(2, '0')} ${ampm}`;
 }
+
+// Generates an array of date strings based on repeat settings
+function generateDates(startDateStr, repeatMode, repeatCount, repeatWeekDays) {
+  if (repeatMode === 'none') return [startDateStr];
+  const [sy, sm, sd] = startDateStr.split('-').map(Number);
+  const dates = new Set();
+  if (repeatMode === 'daily') {
+    for (let i = 0; i < repeatCount; i++) {
+      const dt = new Date(sy, sm - 1, sd + i);
+      dates.add(toDateStr(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+    }
+  } else if (repeatMode === 'weekly') {
+    const startDOW = new Date(sy, sm - 1, sd).getDay();
+    for (let week = 0; week < repeatCount; week++) {
+      for (const wd of repeatWeekDays) {
+        const diff = (wd - startDOW) + week * 7;
+        if (week === 0 && diff < 0) continue;
+        const dt = new Date(sy, sm - 1, sd + diff);
+        dates.add(toDateStr(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+      }
+    }
+  }
+  return [...dates].sort();
+}
+
 
 export default function Medications() {
   const today = new Date();
@@ -67,10 +92,8 @@ export default function Medications() {
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [showForm, setShowForm] = useState(false);
   const [newMed, setNewMed] = useState({
-    name: "",
-    dosage: "",
-    time: "",
-    date: getTodayStr(),
+    name: '', dosage: '', time: '', date: getTodayStr(),
+    repeatMode: 'none', repeatCount: 7, repeatWeekDays: [],
   });
 
   // ── Calendar helpers ────────────────────────────────────────────────────────
@@ -98,18 +121,21 @@ export default function Medications() {
   const handleAddMed = (e) => {
     e.preventDefault();
     if (!newMed.name.trim()) return;
-    const med = {
-      id: Date.now().toString(),
+    const seriesId = Date.now().toString();
+    const dates = generateDates(newMed.date || getTodayStr(), newMed.repeatMode, newMed.repeatCount, newMed.repeatWeekDays);
+    const newEntries = dates.map((date, i) => ({
+      id: `${seriesId}_${i}`,
+      seriesId,
       name: newMed.name.trim(),
       dosage: newMed.dosage.trim(),
       time: newMed.time,
-      date: newMed.date || getTodayStr(),
+      date,
       taken: false,
-    };
-    const updated = [...meds, med];
+    }));
+    const updated = [...meds, ...newEntries];
     setMeds(updated);
     saveMeds(updated);
-    setNewMed({ name: "", dosage: "", time: "", date: selectedDate });
+    setNewMed({ name: '', dosage: '', time: '', date: selectedDate, repeatMode: 'none', repeatCount: 7, repeatWeekDays: [] });
     setShowForm(false);
   };
 
@@ -128,7 +154,7 @@ export default function Medications() {
   };
 
   const openAddForm = () => {
-    setNewMed({ name: "", dosage: "", time: "", date: selectedDate });
+    setNewMed({ name: '', dosage: '', time: '', date: selectedDate, repeatMode: 'none', repeatCount: 7, repeatWeekDays: [] });
     setShowForm(true);
   };
 
@@ -555,13 +581,79 @@ export default function Medications() {
                   <input
                     id="med-date"
                     type="date"
-                    required
-                    className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] text-on-surface bg-surface-container-lowest transition-colors"
-                    value={newMed.date}
-                    onChange={(e) => setNewMed({ ...newMed, date: e.target.value })}
-                  />
-                </div>
+                  className="w-full px-4 py-3 rounded-xl border-2 border-outline-variant focus:border-primary focus:outline-none text-[16px] text-on-surface bg-surface-container-lowest transition-colors"
+                  value={newMed.date}
+                  onChange={(e) => setNewMed({ ...newMed, date: e.target.value })}
+                />
               </div>
+            </div>
+
+            {/* ── Repeat section ─────────────────────────────────────── */}
+            <div className="flex flex-col gap-3 pb-2">
+              <label className="text-[13px] font-black text-on-surface-variant uppercase tracking-wider">Repeat</label>
+
+              {/* Mode toggles */}
+              <div className="flex gap-2">
+                {[['none','No Repeat','block'],['daily','Daily','today'],['weekly','Weekly','date_range']].map(([mode,label,icon])=>(
+                  <button key={mode} type="button"
+                    onClick={()=>setNewMed(m=>({...m,repeatMode:mode}))}
+                    className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-[12px] font-black transition-all
+                      ${newMed.repeatMode===mode?'border-primary bg-primary-fixed text-primary':'border-outline-variant text-on-surface-variant bg-surface hover:bg-surface-container'}`}>
+                    <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings:"'FILL' 1"}}>{icon}</span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Daily options */}
+              {newMed.repeatMode==='daily'&&(
+                <div className="flex items-center gap-3 bg-surface-container rounded-xl px-4 py-3">
+                  <span className="material-symbols-outlined text-primary text-[20px]">repeat</span>
+                  <span className="text-[14px] font-bold text-on-surface">Repeat every day for</span>
+                  <input type="number" min="2" max="365"
+                    className="w-16 px-2 py-1.5 text-center rounded-lg border-2 border-primary font-black text-[15px] text-primary focus:outline-none bg-surface"
+                    value={newMed.repeatCount}
+                    onChange={e=>setNewMed(m=>({...m,repeatCount:Math.max(2,Number(e.target.value))}))}/>
+                  <span className="text-[14px] font-bold text-on-surface">days</span>
+                </div>
+              )}
+
+              {/* Weekly options */}
+              {newMed.repeatMode==='weekly'&&(
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between gap-1">
+                    {['S','M','T','W','T','F','S'].map((d,i)=>{
+                      const sel=newMed.repeatWeekDays.includes(i);
+                      return (
+                        <button key={i} type="button"
+                          onClick={()=>setNewMed(m=>({...m,repeatWeekDays:sel?m.repeatWeekDays.filter(x=>x!==i):[...m.repeatWeekDays,i].sort()}))}
+                          className={`flex-1 h-9 rounded-full text-[13px] font-black transition-all
+                            ${sel?'bg-primary text-on-primary shadow-md':'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}>
+                          {d}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center gap-3 bg-surface-container rounded-xl px-4 py-3">
+                    <span className="material-symbols-outlined text-primary text-[20px]">event_repeat</span>
+                    <span className="text-[14px] font-bold text-on-surface">For</span>
+                    <input type="number" min="1" max="52"
+                      className="w-14 px-2 py-1.5 text-center rounded-lg border-2 border-primary font-black text-[15px] text-primary focus:outline-none bg-surface"
+                      value={newMed.repeatCount}
+                      onChange={e=>setNewMed(m=>({...m,repeatCount:Math.max(1,Number(e.target.value))}))}/>
+                    <span className="text-[14px] font-bold text-on-surface">weeks</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Preview badge */}
+              {newMed.repeatMode!=='none'&&(
+                <p className="text-[12px] font-bold text-primary bg-primary-fixed px-3 py-2 rounded-xl">
+                  📅 Will create {generateDates(newMed.date||getTodayStr(),newMed.repeatMode,newMed.repeatCount,newMed.repeatWeekDays).length} medication entries
+                  {newMed.repeatMode==='weekly'&&newMed.repeatWeekDays.length===0?' — select at least one day':''}
+                </p>
+              )}
+            </div>
             </form>
 
             {/* Sticky action buttons — pinned at sheet bottom, always visible */}

@@ -83,6 +83,14 @@ export default function Chat() {
 
     // Grab fresh patient context right at send time so it always reflects latest data
     const { medications, meals } = getPatientContext();
+    
+    let currentPatientName = 'Jenish';
+    try {
+      const p = JSON.parse(localStorage.getItem('aarogya_profile') || '{}');
+      if (p.name) currentPatientName = p.name;
+    } catch (e) {
+      // default fallback
+    }
 
     try {
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -94,7 +102,7 @@ export default function Chat() {
           session_id: SESSION_ID,
           medications,
           meals,
-          patient_name: 'Jenish',
+          patient_name: currentPatientName,
         }),
       });
 
